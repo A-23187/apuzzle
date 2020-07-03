@@ -1,0 +1,148 @@
+#!/bin/bash
+
+nums=()
+n=0 # the width/height of the grid, i.e. the difficulty of the game
+m=0 # m = n*n, the length of nums
+x=0 #
+y=0 # (x, y), the position of the blank
+
+# swap two numbers in nums
+# @param $1, $2 the index of these two numbers
+function swap( ) {
+    local t i=$1 j=$2
+    t=${nums[$i]}
+    nums[$i]=${nums[$j]}
+    nums[$j]=$t
+}
+
+# shuffle the first "$1" numbers of nums
+# @param $1 see above 
+# @return how many times swap happened
+function shuffle( ) {
+    local i j=0 n=$1
+    while ((n > 1)); do
+        i=$((RANDOM % n))
+        n=$((n-1))
+        ((i != n)) && { j=$((j+1)); swap $i $n; }
+    done
+    return $j
+}
+
+# generate solvable puzzle
+# https://www.cs.bham.ac.uk/~mdr/teaching/modules04/java2/TilesSolvability.html
+function gen_puzzle( ) {
+    # init nums
+    nums=()
+    local i
+    for ((i=1; i<m; i++)); do
+        nums[$((i-1))]=$i
+    done
+    nums[$i]=""
+
+    # gen the position of the blank randomly
+    local t=$((RANDOM % m))
+    x=$((t / n))
+    y=$((t % n))
+
+    # shuffle 
+    shuffle $((m-1))
+    i=$?
+    if ((n%2 == 1 && i%2 == 1 || n%2 == 0 && (i+x)%2 == 0)); then
+        # swap for solvability
+        swap 0 $((m-2))
+    fi
+
+    # insert the blank
+    for ((i=m-1; i>t; i--)); do
+        nums[$i]=${nums[$((i-1))]}
+    done
+    nums[$t]=""
+}
+
+# print puzzle
+function print_puzzle( ) {
+    clear
+
+    local i=0 w=$((2 + n/11))
+    while ((i < m)); do
+        printf "%*s " $w ${nums[$i]}
+        i=$((i+1))
+        ((i%n == 0)) && echo
+    done
+}
+
+# move tile
+# @param $1 the moving direction of the tile
+function move_tile( ) {
+    local d=$1 w=$((2 + n/11)) i=$((x*n+y))
+    local xn=$((x+1)) yn=$(((w+1) * y + 1))
+    case $d in
+        h) ((y < n-1)) && { nums[$i]=${nums[$((i+1))]}; y=$((y+1)); } || return;;
+        j) ((x > 0))   && { nums[$i]=${nums[$((i-n))]}; x=$((x-1)); } || return;;
+        k) ((x < n-1)) && { nums[$i]=${nums[$((i+n))]}; x=$((x+1)); } || return;;
+        l) ((y > 0))   && { nums[$i]=${nums[$((i-1))]}; y=$((y-1)); } || return;;
+        *) return;;
+    esac
+    #
+    printf "\e[$xn;${yn}H%*s " $w ${nums[$i]} 
+    xn=$((x+1))
+    yn=$(((w+1) * y+ 1))
+    printf "\e[${xn};${yn}H%*s " $w ""
+    echo -en "\e[$((n+1));1H"
+}
+
+# check if the puzzle is resolved
+# @return 1 - resolved, 0 - not resolved
+function check_puzzle( ) {
+    local i
+    for ((i=1; i<m; i++)); do
+        ((nums[$((i-1))] != i)) && return 0
+    done
+    return 1
+}
+
+# print "Good!" in the middle
+function good( ) {
+    local w=$((2 + n/11))
+    local a=$((n / 2 + 1)) b=$(((n*w + n - 5) / 2)) # 5, the len of "Good!"
+    printf "\e[$a;1H\e[7m%*sGood!%*s\e[0m\e[$((n+1));1H" $b "" $b ""
+}
+
+function game( ) {
+    gen_puzzle
+    print_puzzle
+    while : ; do
+        read -n 1 -s
+        move_tile $REPLY
+        check_puzzle
+        if (($?)); then
+            good
+            break
+        fi
+    done
+}
+
+# show menu
+# @param $1 the current difficulty
+function menu( ) {
+    clear
+    # TODO
+}
+
+function main( ) {
+    #local n=$1
+    local n=${1:-3}
+    local m=$((n*n))
+    while : ; do
+        game
+        echo
+        read -n 1 -s
+        case $REPLY in
+            m) menu;;   # go to menu
+            n) ;;       # next puzzle
+            *) return;; # exit
+        esac
+    done
+}
+
+main $1
