@@ -123,26 +123,36 @@ function game( ) {
 }
 
 # show menu
-# @param $1 the current difficulty
 function menu( ) {
     clear
-    # TODO
+    echo
+    echo '  N-Puzzle  '
+    echo
+    echo ' LEVEL  0-9 '
+    echo ' HELP     h '
+    echo ' EXIT     e '
+    echo
+    read -n 1 -s
+    case $REPLY in
+        [0-9]) n=$((REPLY + 2));;
+        h) exit;; # TODO
+        *) exit;;
+    esac
+    m=$((n*n))
 }
 
 function main( ) {
-    #local n=$1
-    local n=${1:-3}
-    local m=$((n*n))
+    menu
     while : ; do
         game
         echo
         read -n 1 -s
         case $REPLY in
-            m) menu;;   # go to menu
-            n) ;;       # next puzzle
-            *) return;; # exit
+            m) menu;; # go to menu
+            n) ;;     # next puzzle
+            *) exit;; # exit
         esac
     done
 }
 
-main $1
+main
