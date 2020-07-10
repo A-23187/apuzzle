@@ -49,10 +49,9 @@ function gen_puzzle( ) {
     # shuffle 
     shuffle $((m-1))
     i=$?
-    if ((n%2 == 1 && i%2 == 1 || n%2 == 0 && (i+x)%2 == 0)); then
-        # swap for solvability
-        swap 0 $((m-2))
-    fi
+
+    # swap for solvability
+    ((n%2 == 1 && i%2 == 1 || n%2 == 0 && (i+x)%2 == 0)) && swap 0 $((m-2))
 
     # insert the blank
     for ((i=m-1; i>t; i--)); do
@@ -114,13 +113,10 @@ function game( ) {
     gen_puzzle
     print_puzzle
     while : ; do
-        read -n 1 -s
+        read -n1 -s
         move_tile $REPLY
         check_puzzle
-        if (($?)); then
-            good
-            break
-        fi
+        (($?)) && { good; break; }
     done
 }
 
@@ -147,17 +143,18 @@ function menu( ) {
     echo ' HELP     h '
     echo ' EXIT     e '
     echo
-    read -n 1 -s
+    read -n1 -s
     case $REPLY in
         [0-9]) n=$((REPLY + 2));;
-        h) help; echo -en '\nPress any key to continue '; read -n 1 -s;;
+        h) help; echo -en '\nPress any key to continue '; read -n1 -s;;
         *) exit;;
     esac
     m=$((n*n))
 }
 
-function main( ) {
-    # parse options
+# parse cli options
+# @param "$@"
+function parse_opts( ) {
     local opt
     while getopts ':hk:l:' opt; do
         case $opt in
@@ -173,6 +170,11 @@ function main( ) {
         echo "$APUZZLE: invalid option '$1'"
         exit
     fi
+}
+
+function main( ) {
+    # parse options
+    parse_opts "$@"
 
     # show menu when the level isn't specified
     ((n == 0)) && { n=3; menu; }
@@ -180,7 +182,7 @@ function main( ) {
     # the main loop
     while : ; do
         game
-        read -n 1 -s
+        read -n1 -s
         case $REPLY in
             m) menu;; # go to menu
             n) ;;     # next puzzle
