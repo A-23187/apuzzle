@@ -3,6 +3,7 @@
 APUZZLE=$(basename $0)
 
 nums=()
+keys=(h j k l)
 n=0 # the width/height of the grid, i.e. the difficulty of the game
 m=0 # m = n*n, the length of nums
 x=0 #
@@ -77,11 +78,17 @@ function print_puzzle( ) {
 function move_tile( ) {
     local d=$1 w=$((2 + n/11)) i=$((x*n+y))
     local xn=$((x+1)) yn=$(((w+1) * y + 1))
+    if [[ $d == $'\e' ]]; then
+        read -n1 -s -t 0.01
+        if [[ $REPLY == [ ]]; then
+            read -n1 -s -t 0.01 d
+        fi
+    fi
     case $d in
-        h) ((y < n-1)) && { nums[$i]=${nums[$((i+1))]}; y=$((y+1)); } || return;;
-        j) ((x > 0))   && { nums[$i]=${nums[$((i-n))]}; x=$((x-1)); } || return;;
-        k) ((x < n-1)) && { nums[$i]=${nums[$((i+n))]}; x=$((x+1)); } || return;;
-        l) ((y > 0))   && { nums[$i]=${nums[$((i-1))]}; y=$((y-1)); } || return;;
+        D|${keys[0]}) ((y < n-1)) && { nums[$i]=${nums[$((i+1))]}; y=$((y+1)); } || return;;
+        B|${keys[1]}) ((x > 0))   && { nums[$i]=${nums[$((i-n))]}; x=$((x-1)); } || return;;
+        A|${keys[2]}) ((x < n-1)) && { nums[$i]=${nums[$((i+n))]}; x=$((x+1)); } || return;;
+        C|${keys[3]}) ((y > 0))   && { nums[$i]=${nums[$((i-1))]}; y=$((y-1)); } || return;;
         *) return;;
     esac
     #
@@ -124,11 +131,11 @@ function game( ) {
 function help( ) {
     echo "$APUZZLE - An n-puzzle game written in bash"
     echo
-    echo "Usage: $APUZZLE [-h] [-k key] [-l level]"
+    echo "Usage: $APUZZLE [-h] [-k keys] [-l level]"
     echo
     echo "Available options:"
     echo "  -h       Show this help text"
-    echo "  -k key   Customize the keys for 4 directions in"
+    echo "  -k keys  Customize the keys for 4 directions in"
     echo "           left-down-up-right order (default: hjkl)"
     echo "  -l level Specify level (0-9, default: 1)"
 }
@@ -159,7 +166,15 @@ function parse_opts( ) {
     while getopts ':hk:l:' opt; do
         case $opt in
             h) help; exit;;
-            k) ;; # TODO
+            k)
+                if ((${#OPTARG} < 4)); then
+                    echo "$APUZZLE: invalid keys '$OPTARG'"
+                    exit
+                fi
+                for i in {0..3}; do
+                    keys[$i]=${OPTARG:i:1}
+                done
+                ;;
             l) n=3; [[ $OPTARG =~ ^[0-9]$ ]] && n=$((OPTARG+2)); m=$((n*n));;
             :) echo "$APUZZLE: option '-$OPTARG' requires an argument"; exit;;
             ?) echo "$APUZZLE: invalid option '-$OPTARG'"; exit;;
